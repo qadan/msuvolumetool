@@ -159,8 +159,8 @@ def main():
             copy_path = tf.name
             copy_edit_volume(msu_filename, tf, args['percentage'])
         shutil.move(copy_path, msu_filename)
-        print("Set volume of %s to %s%%" %
-              (msu_filename, str(args['percentage'])))
+        print("%s volume of %s to %s%%" %
+              (verb, msu_filename, str(args['percentage'])))
 
     # Will be 1 if issues were encountered.
     return code
