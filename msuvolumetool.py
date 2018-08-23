@@ -6,6 +6,7 @@ Edits the volume of .pcm MSU-1 files.
 
 import os
 import shutil
+from psutil import disk_usage
 from struct import pack, unpack
 from sys import exit
 from argparse import ArgumentParser
@@ -99,7 +100,7 @@ def validate_space(msu_filename):
 
     There's an inherent race condition here, but we're trying our best ok?
     """
-    diskinfo = shutil.disk_usage(msu_filename)
+    diskinfo = disk_usage(msu_filename)
     fileinfo = os.stat(msu_filename)
     return fileinfo.st_size <= diskinfo.free
 
