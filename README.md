@@ -14,12 +14,16 @@ The executable can be plopped into a folder full of .pcm files and run to batch
 modify the volume of all files in the folder. You will be asked for the
 percentage modifier to use.
 
-The modifier is compared to an existing volume of 100%, so:
+The modifier is compared to the existing value of each sample of the .pcm and is
+used as a percentage by which to modify the sample, so:
 
-* Using a modifier of 50 sets the volume to half
-* Using a modifier of 200 doubles the volume
+* Using a modifier of 50 halves each sample
+* Using a modifier of 200 doubles each sample
 
-Et cetera.
+Et cetera. This shouldn't necessarily be used as a metric to determine the
+overall feel of the change in volume, just as the strict rule of how much each
+sample is modified by. You may need to run the tool a couple times to get things
+where you like it, or run against the `-1.pcm` file and see where that puts you.
 
 Alternatively, you can run the tool from the command line and target individual
 files.
@@ -57,8 +61,8 @@ optional arguments:
 
 Contact me if you're having troubles, or just open an issue here.
 
-* Discord - fantallis#3161
-* Twitter - @itsqadan
+* Discord - `fantallis#3161`
+* Twitter - [@itsqadan](https://twitter.com/itsqadan)
 
 ## License
 
