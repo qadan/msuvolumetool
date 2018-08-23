@@ -92,19 +92,6 @@ def get_msu_files(target):
     return files
 
 
-def validate_space(msu_filename):
-    """
-    Validates that enough space exists to create a copy of msu_filename.
-
-    The copy will be precisely the same size.
-
-    There's an inherent race condition here, but we're trying our best ok?
-    """
-    diskinfo = disk_usage(msu_filename)
-    fileinfo = os.stat(msu_filename)
-    return fileinfo.st_size <= diskinfo.free
-
-
 def validate_is_msu(msu_filename):
     """
     Simple validator that a given file does indeed have MSU headers.
@@ -159,11 +146,6 @@ def main():
     code = 0
     verb = "Increased" if args['percentage'] > 100 else "Decreased"
     for msu_filename in msu_files:
-        # Validate space in the temp folder.
-        if not validate_space(msu_filename):
-            print("Not enough space to create temp file for %s; skipping ..." %
-                 msu_filename)
-            continue
         # Ensure the file actually has an MSU header.
         if not validate_is_msu(msu_filename):
             print(
