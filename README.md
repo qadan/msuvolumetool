@@ -2,6 +2,12 @@
 
 Tool for modifying the volume of one or more .pcm MSU-1 files.
 
+_NOTE_: This tool is intended for spot-check usage on downloaded MSU packs that
+don't sound right in any specific MSU-1 playback implementation. The transform
+is currently lossy and structure may be lost with repeated use. For packs in
+development, it's still recommended to modify the actual .wav source using a
+tool that supports waveform normalization and dynamic range compression.
+
 ## Requirements
 
 * Python 3.2 or higher
