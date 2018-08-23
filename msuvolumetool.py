@@ -10,7 +10,7 @@ from math import floor
 from struct import pack, unpack
 from argparse import ArgumentParser
 from functools import partial
-from tempfile import mkstemp, gettempdir
+from tempfile import NamedTemporaryFile
 
 
 def get_arguments():
@@ -100,9 +100,9 @@ def copy_edit_volume(msu_filename, target, percentage):
     """
     Modifies samples in an MSU file against the given percentage.
     """
-    with open(msu_filename, 'rb') as msu, open(target, 'wb') as target_file:
+    with open(msu_filename, 'rb') as msu:
         # Move over the first 8 bytes - header and loop.
-        target_file.write(msu.read(8))
+        target.write(msu.read(8))
         # Determine the modifier
         modifier = percentage / 100.0
         for sample in iter(partial(msu.read, 2), ''):
@@ -115,17 +115,7 @@ def copy_edit_volume(msu_filename, target, percentage):
             # get consistent output. Not that I suspect this is something a
             # human could pick up on.
             packed_sample = pack('<h', int(floor(sample_int[0] * modifier)))
-            target_file.write(packed_sample)
-
-
-def create_temp_copy():
-    """
-    Writes a copy of the msu_file to a temporary spot.
-
-    Returns the location of the temporary copy.
-    """
-    file_info = mkstemp(dir=gettempdir())
-    return file_info[1]
+            target.write(packed_sample)
 
 
 def main():
@@ -152,10 +142,11 @@ def main():
             continue
 
         # Copy to a temp location we can work with.
-        copy = create_temp_copy()
-        # Edit the copy, then overwrite the original.
-        copy_edit_volume(msu_filename, copy, args['percentage'])
-        shutil.move(copy, msu_filename)
+        with NamedTemporaryFile(delete=False) as tf:
+            # Edit the copy, then overwrite the original.
+            copy_path = tf.name
+            copy_edit_volume(msu_filename, tf, args['percentage'])
+        shutil.move(copy_path, msu_filename)
         print("Set volume of %s to %s%%" %
               (msu_filename, str(args['percentage'])))
 
