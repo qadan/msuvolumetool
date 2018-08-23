@@ -6,10 +6,9 @@ Edits the volume of .pcm MSU-1 files.
 
 import os
 import shutil
-from math import floor
 from struct import pack, unpack
+from sys import exit
 from argparse import ArgumentParser
-from functools import partial
 from tempfile import NamedTemporaryFile
 
 
@@ -26,10 +25,10 @@ def get_arguments():
         '-p',
         '--percentage',
         help="""The percentage offset by which to change the volume. The
-                existing volume is assumed to be 100%%; for example, to cut the
-                volume in half, use 50, and to double the volume use 200. If
-                this argument is not provided, you will be asked to give a
-                percentage.""",
+                existing volume of each sample in the source is assumed to be
+                100%%; for example, to cut each sample in half, use 50, and to
+                double each sample, use 200. If this argument is not provided,
+                you will be asked to give a percentage.""",
         type=int,
         default=False)
     parser.add_argument(
@@ -43,9 +42,12 @@ def get_arguments():
     return vars(parser.parse_args())
 
 
-def validate_args(msu_files):
+def validate_files(msu_files):
     """
-    Return False if the arguments aren't valid.
+    Return False if the files aren't valid.
+
+    This basically means if no files were found, in which case msu_files will
+    be empty.
     """
     if not msu_files:
         print("""No MSU files in the given target, or the target does not have
@@ -64,6 +66,9 @@ def get_percentage():
             percentage = int(choice)
             if percentage < 1:
                 print("Please enter a number larger than 0.")
+                continue
+            if percentage == 100:
+                print("This won't change the volume; enter a different number.")
             return percentage
         except ValueError:
             print("Please enter a positive number.")
@@ -86,6 +91,19 @@ def get_msu_files(target):
     return files
 
 
+def validate_space(msu_filename):
+    """
+    Validates that enough space exists to create a copy of msu_filename.
+
+    The copy will be precisely the same size.
+
+    There's an inherent race condition here, but we're trying our best ok?
+    """
+    diskinfo = shutil.disk_usage(msu_filename)
+    fileinfo = os.stat(msu_filename)
+    return fileinfo.st_size <= diskinfo.free
+
+
 def validate_is_msu(msu_filename):
     """
     Simple validator that a given file does indeed have MSU headers.
@@ -96,26 +114,33 @@ def validate_is_msu(msu_filename):
         return first_four == 'MSU1'
 
 
+def yield_sample_chunks(msu_filename):
+    """
+    Yields chunks from the sample portion of the MSU file.
+    """
+    with open(msu_filename, 'rb') as msu:
+        msu.seek(8)
+        while True:
+            chunk = msu.read(2)
+            if chunk:
+                unpacked_chunk = unpack('<h', chunk)
+                yield unpacked_chunk[0]
+            else:
+                break
+
+
 def copy_edit_volume(msu_filename, target, percentage):
     """
     Modifies samples in an MSU file against the given percentage.
     """
+    # Move over the first 8 bytes - header and loop.
     with open(msu_filename, 'rb') as msu:
-        # Move over the first 8 bytes - header and loop.
         target.write(msu.read(8))
-        # Determine the modifier
-        modifier = percentage / 100.0
-        for sample in iter(partial(msu.read, 2), ''):
-            # Possibly slow, but what IS the idiom for iterating over bytes in
-            # Python anyway? Revisit?
-            if len(sample) != 2:
-                return
-            sample_int = unpack('<h', sample)
-            # Rather than casting directly to an integer, floor() it first to
-            # get consistent output. Not that I suspect this is something a
-            # human could pick up on.
-            packed_sample = pack('<h', int(floor(sample_int[0] * modifier)))
-            target.write(packed_sample)
+
+    # Determine the modifier
+    modifier = percentage / 100.0
+    for sample in yield_sample_chunks(msu_filename):
+        target.write(pack('<h', int(round(sample * modifier))))
 
 
 def main():
@@ -125,14 +150,19 @@ def main():
     # Get and validate arguments.
     args = get_arguments()
     msu_files = get_msu_files(args['target'])
-    if not validate_args(msu_files):
+    if not validate_files(msu_files):
         return 1
     if not args['percentage']:
         args['percentage'] = get_percentage()
 
     code = 0
+    verb = "Increased" if args['percentage'] > 100 else "Decreased"
     for msu_filename in msu_files:
-        # @TODO: Validate space in the temp folder.
+        # Validate space in the temp folder.
+        if not validate_space(msu_filename):
+            print("Not enough space to create temp file for %s; skipping ..." %
+                 msu_filename)
+            continue
         # Ensure the file actually has an MSU header.
         if not validate_is_msu(msu_filename):
             print(
@@ -157,6 +187,13 @@ def main():
 # Code runner.
 if __name__ == '__main__':
     try:
-        main()
+        code = main()
+        if code > 0:
+            # This is a bit of a hack-y workaround for the use case outside of
+            # the command line, just to ensure people do see any errors.
+            input("Press Enter to continue ...")
+        exit(code)
     except KeyboardInterrupt:
         print("Exiting ...")
+    except SyntaxError:
+        pass

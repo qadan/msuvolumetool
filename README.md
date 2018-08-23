@@ -28,6 +28,13 @@ where you like it, or run against the `-1.pcm` file and see where that puts you.
 Alternatively, you can run the tool from the command line and target individual
 files.
 
+**N.B.** Don't go hog-wild with your multiplier. Values for each sample tend to
+cap out at around +/- 1500 before getting super loud, and the maximum value for
+a sample in either direction is 32767. Rather than checking on every single
+sample for every single file whether or not it's within a valid range, I'm
+opting to go the fast route and warn you here; it'll just crash if you go out of
+range.
+
 Here's the output of `msuvolumetool -h`:
 
 ```
@@ -40,10 +47,11 @@ optional arguments:
   -h, --help            show this help message and exit
   -p PERCENTAGE, --percentage PERCENTAGE
                         The percentage offset by which to change the volume.
-                        The existing volume is assumed to be 100%; for
-                        example, to cut the volume in half, use 50, and to
-                        double the volume use 200. If this argument is not
-                        provided, you will be asked to give a percentage.
+                        The existing volume of each sample in the source is
+                        assumed to be 100%; for example, to cut each sample in
+                        half, use 50, and to double each sample, use 200. If
+                        this argument is not provided, you will be asked to
+                        give a percentage.
   -t TARGET, --target TARGET
                         The path to a .pcm file, or a folder full of .pcm
                         files to edit. The files will be validated and any
