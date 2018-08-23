@@ -6,7 +6,6 @@ Edits the volume of .pcm MSU-1 files.
 
 import os
 import shutil
-from psutil import disk_usage
 from struct import pack, unpack
 from sys import exit
 from argparse import ArgumentParser
